@@ -14,3 +14,9 @@
 .row{
   margin-left: calc(50vw - 200px);
 }
+.board{
+  margin-top: 10px;
+}
+.selected{
+  background-color: greenyellow;
+}
