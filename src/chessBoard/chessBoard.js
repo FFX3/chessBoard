@@ -44,8 +44,10 @@ export default class ChessBoard extends Component {
       whiteKingMoved: false,
 
       boardPosition: startingPosition,
+      lastMove: {},
 
       selectedSquare: '',
+      legalMoves: {}
 
     }
     this.handleClick = this.handleClick.bind(this);
@@ -53,10 +55,9 @@ export default class ChessBoard extends Component {
   }
 
   setupChessBoard = (position) =>{
-    alert("setting up the chessboard")
 
     for(const square in position){
-      this. changePieceVisually(square, position[square])     
+      this.changePieceVisually(square, position[square])     
     }
   }
 
@@ -64,6 +65,9 @@ export default class ChessBoard extends Component {
   convertChessNotation = (square) => {
     let coordinate = {}
     let y = Number(square[1]) - 1 //chess notation starts at 1, but it's easier to work with a grid when it starts at 0
+    if(!(y >= 0 && y < 8)){
+      return null
+    }
     let x = square[0]
     switch(x){
       case "a":
@@ -90,14 +94,51 @@ export default class ChessBoard extends Component {
       case "h":
         x = 7
       break;
+      default:
+        return null
     }
     coordinate.x = x
     coordinate.y = y
     return coordinate
   }
-  
-  
 
+  convertCoordinate = (coordinate) =>{
+    if(!(coordinate.y >= 0 && coordinate.y < 8 && coordinate.x >= 0 && coordinate.x < 8)){
+      return null
+    }
+    let square = ""
+    switch(coordinate.x){
+      case 0:
+        square = 'a'
+      break;
+      case 1:
+        square = 'b'
+      break;
+      case 2:
+        square = 'c'
+      break;
+      case 3:
+        square = 'd'
+      break;
+      case 4:
+        square = 'e'
+      break;
+      case 5:
+        square = 'f'
+      break;
+      case 6:
+        square = 'g'
+      break;
+      case 7:
+        square = 'h'
+      break;
+    }
+    square = square + (coordinate.y + 1).toString()
+    return square
+  }
+  
+  
+  //visual html board manipulation
   //I need identical function that manipulate the boardPosition value in the state
   removePieceVisually = (square) => {
     this._board.querySelector("#"+square).innerHTML = ""
@@ -109,54 +150,138 @@ export default class ChessBoard extends Component {
   movePieceVisually = (start, end) => {
     let piece = this._board.querySelector("#"+start).innerHTML
     this.removePieceVisually(start)
-    this. changePieceVisually(end, piece)
+    this.changePieceVisually(end, piece)
+  }
+  
+  //boardObject Manipulation this function will be useful for doing calulation without actually changing the boardPosition in this.state
+  removePieceFromBoardObject = (square, boardObject) => {
+    boardObject[square] = ''
+    return boardObject
   }
 
-  //these next 3 functions should reference the state boardPosition value and not the html board directly
-  isSquareEmpty = (square) =>{
-    if(this._board.querySelector("#"+square).innerHTML === ""){
+  changePieceFromBoardObject = (square, piece, boardObject) => {
+    boardObject[square] = piece
+    return boardObject
+  }
+
+  movePieceOnBoardObject = (start, end, boardObject) => {
+    let piece = boardObject[start]
+    boardObject = this.removePieceFromBoardObject(start, boardObject)
+    boardObject = this.changePieceFromBoardObject(end, piece, boardObject)
+    return boardObject
+  }
+
+
+  //boardPosition state manipulation & visual board syncro
+  removePiece = (square) =>{
+    this.removePieceVisually(square)
+    this.setState({boardPosition: this.removePieceFromBoardObject(square, this.state.boardPosition)})
+  }
+  changePiece = (square, piece) =>{
+    this.changePieceVisually(square, piece)
+    this.setState({boardPosition: this.changePieceFromBoardObject(square, piece, this.state.boardPosition)})
+  }
+  movePiece = (start, end) =>{
+    this.movePieceVisually(start, end)
+    this.setState({boardPosition: this.movePieceOnBoardObject(start, end, this.state.boardPosition)})
+  }
+
+  //chess logic
+  isSquareEmpty = (square, boardObject) =>{
+    if(boardObject[square] === ""){
       return true
     }else{
       return false
     }
   }
-  doesSquareContainWhitePiece = (square) =>{
-    if(this._board.querySelector("#"+square).innerHTML === whiteKing ||
-    this._board.querySelector("#"+square).innerHTML === whiteQueen ||
-    this._board.querySelector("#"+square).innerHTML === whitePawn ||
-    this._board.querySelector("#"+square).innerHTML === whiteRook ||
-    this._board.querySelector("#"+square).innerHTML === whiteKnight ||
-    this._board.querySelector("#"+square).innerHTML === whiteBishop){
+  doesSquareContainWhitePiece = (square, boardObject) =>{
+    if(boardObject[square] === whiteKing ||
+    boardObject[square] === whiteQueen ||
+    boardObject[square] === whitePawn ||
+    boardObject[square] === whiteRook ||
+    boardObject[square] === whiteKnight ||
+    boardObject[square] === whiteBishop){
       return true
     }else{
       return false
     }
   }
-  doesSquareContainBlackPiece = (square) =>{
-    console.log(blackPawn)
-    console.log(this._board.querySelector("#"+square).innerHTML)
-    if(this._board.querySelector("#"+square).innerHTML === blackKing ||
-    this._board.querySelector("#"+square).innerHTML === blackQueen ||
-    this._board.querySelector("#"+square).innerHTML === blackPawn ||
-    this._board.querySelector("#"+square).innerHTML === blackRook ||
-    this._board.querySelector("#"+square).innerHTML === blackKnight ||
-    this._board.querySelector("#"+square).innerHTML === blackBishop){
+  doesSquareContainBlackPiece = (square, boardObject) =>{
+    if(boardObject[square] === blackKing ||
+    boardObject[square] === blackQueen ||
+    boardObject[square] === blackPawn ||
+    boardObject[square] === blackRook ||
+    boardObject[square] === blackKnight ||
+    boardObject[square] === blackBishop){
       return true
     }else{
       return false
     }
+  }
+
+  //these function find all the legal moves a piece could make without accounting for checks
+  findPawnMoves = (square, boardObject) => {
+    let coordinate = this.convertChessNotation(square)
+    let isWhite
+    let legalMoves = []
+    let tempCoordinate = {}
+    let tempSquare = ''
+    //we multiply movements with this value to reverse movements when playing with the black pawn
+    let direction
+    if(boardObject[square] === whitePawn){
+      isWhite = true
+      direction = 1
+    }else if(boardObject[square] === blackPawn){
+      isWhite = false
+      direction = -1
+    }else{
+      console.log('finding pawn moves for a non-pawn piece')
+      return
+    }
+
+    //move forward 1 step
+    if(this.isSquareEmpty(this.convertCoordinate({x:coordinate.x, y:(coordinate.y + (1 * direction))}), boardObject)){
+      legalMoves.push(this.convertCoordinate({x:coordinate.x, y:(coordinate.y + (1 * direction))}))
+      //2 steps forward
+      if(this.isSquareEmpty(this.convertCoordinate({x:coordinate.x, y:(coordinate.y + (2 * direction))}), boardObject) && (( isWhite && coordinate.y === 1)||( !isWhite && coordinate.y === 6))){
+        legalMoves.push(this.convertCoordinate({x:coordinate.x, y:(coordinate.y + (2 * direction))}))
+      }
+    }
+
+    //diagonal capture
+    //a-side
+    tempCoordinate = {x: coordinate.x - 1, y:coordinate.y + (1 * direction)}
+    tempSquare = this.convertCoordinate(tempCoordinate)
+    if(tempSquare !== null){
+      if(isWhite && this.doesSquareContainBlackPiece(tempSquare, boardObject)||!isWhite && this.doesSquareContainWhitePiece(tempSquare, boardObject)){
+        legalMoves.push(tempSquare)
+      }
+    }
+    //h-side
+    tempCoordinate = {x: coordinate.x + 1, y:coordinate.y + (1 * direction)}
+    tempSquare = this.convertCoordinate(tempCoordinate)
+    if(tempSquare !== null){
+      if(isWhite && this.doesSquareContainBlackPiece(tempSquare, boardObject)||!isWhite && this.doesSquareContainWhitePiece(tempSquare, boardObject)){
+        legalMoves.push(tempSquare)
+      }
+    }
+    //enpasant
+
+    return legalMoves
   }
  
   handleClick = (event) => {
       if(this.state.whiteToPlay){
-        if(this.doesSquareContainWhitePiece(event.target.id)){
+        if(this.doesSquareContainWhitePiece(event.target.id, this.state.boardPosition)){
           this.setState({selectedSquare: event.target.id})
+          console.log(this.findPawnMoves(event.target.id, this.state.boardPosition))
         }else{
           this.setState({selectedSquare: ''})
         }
       }else{
-        if(this.doesSquareContainBlackPiece(event.target.id)){
+        if(this.doesSquareContainBlackPiece(event.target.id, this.state.boardPosition)){
           this.setState({selectedSquare: ''})
+          console.log(this.findPawnMoves(event.target.id, this.state.boardPosition))
         }
       }
   }
