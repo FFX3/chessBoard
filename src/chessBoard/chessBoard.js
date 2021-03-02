@@ -18,7 +18,7 @@ const startingPosition = {
   a1:whiteRook, b1:whiteKnight, c1:whiteBishop, d1:whiteQueen, e1:whiteKing, f1:whiteBishop, g1:whiteKnight, h1:whiteRook,
   a2:whitePawn, b2:whitePawn, c2:whitePawn, d2:whitePawn, e2:whitePawn, f2:whitePawn, g2:whitePawn, h2:whitePawn,
   a3:"", b3:"", c3:"", d3:"", e3:"", f3:"", g3:"", h3:"",
-  a4:"", b4:"", c4:"", d4:"", e4:"", f4:"", g4:"", h4:"",
+  a4:"", b4:"", c4:blackRook, d4:"", e4:"", f4:"", g4:"", h4:"",
   a5:"", b5:"", c5:"", d5:"", e5:"", f5:"", g5:"", h5:"",
   a6:"", b6:"", c6:"", d6:"", e6:"", f6:"", g6:"", h6:"",
   a7:blackPawn, b7:blackPawn, c7:blackPawn, d7:blackPawn, e7:blackPawn, f7:blackPawn, g7:blackPawn, h7:blackPawn,
@@ -45,9 +45,11 @@ export default class ChessBoard extends Component {
 
       boardPosition: startingPosition,
       lastMove: {},
+      whiteKingPosition: 'e1',
+      blackKingPosition: 'e8',
 
       selectedSquare: '',
-      legalMoves: {}
+      legalMovesOfSelectedPiece: {}
 
     }
     this.handleClick = this.handleClick.bind(this);
@@ -220,23 +222,17 @@ export default class ChessBoard extends Component {
   }
 
   //these function find all the legal moves a piece could make without accounting for checks
-  findPawnMoves = (square, boardObject) => {
+  findPawnMoves = (square, isWhite, boardObject) => {
     let coordinate = this.convertChessNotation(square)
-    let isWhite
     let legalMoves = []
     let tempCoordinate = {}
     let tempSquare = ''
     //we multiply movements with this value to reverse movements when playing with the black pawn
     let direction
-    if(boardObject[square] === whitePawn){
-      isWhite = true
+    if(isWhite){
       direction = 1
-    }else if(boardObject[square] === blackPawn){
-      isWhite = false
-      direction = -1
     }else{
-      console.log('finding pawn moves for a non-pawn piece')
-      return
+      direction = -1
     }
 
     //move forward 1 step
@@ -269,21 +265,403 @@ export default class ChessBoard extends Component {
 
     return legalMoves
   }
+
+  findRookMoves = (square, isWhite, boardObject) => {
+    let coordinate = this.convertChessNotation(square)
+    let legalMoves = []
+    let tempCoordinate = coordinate
+    let tempSquare = ''
+
+    //right
+    while(true){
+      tempCoordinate = {x: tempCoordinate.x+1, y:tempCoordinate.y}
+      tempSquare = this.convertCoordinate(tempCoordinate)
+      
+
+      if(tempSquare === null){
+        break
+      }
+      if(this.doesSquareContainWhitePiece(tempSquare, boardObject)){
+        if(isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }else if(this.doesSquareContainBlackPiece(tempSquare, boardObject)){
+        if(!isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }
+      legalMoves.push(tempSquare)
+    }
+    //left
+    tempCoordinate = coordinate
+    while(true){
+      tempCoordinate = {x: tempCoordinate.x-1, y:tempCoordinate.y}
+      tempSquare = this.convertCoordinate(tempCoordinate)
+      
+
+      if(tempSquare === null){
+        break
+      }
+      if(this.doesSquareContainWhitePiece(tempSquare, boardObject)){
+        if(isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }else if(this.doesSquareContainBlackPiece(tempSquare, boardObject)){
+        if(!isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }
+      legalMoves.push(tempSquare)
+    }
+    //up
+    tempCoordinate = coordinate
+    while(true){
+      tempCoordinate = {x: tempCoordinate.x, y:tempCoordinate.y+1}
+      tempSquare = this.convertCoordinate(tempCoordinate)
+      
+
+      if(tempSquare === null){
+        break
+      }
+      if(this.doesSquareContainWhitePiece(tempSquare, boardObject)){
+        if(isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }else if(this.doesSquareContainBlackPiece(tempSquare, boardObject)){
+        if(!isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }
+      legalMoves.push(tempSquare)
+    }
+    //down
+    tempCoordinate = coordinate
+    while(true){
+      tempCoordinate = {x: tempCoordinate.x, y:tempCoordinate.y-1}
+      tempSquare = this.convertCoordinate(tempCoordinate)
+      
+
+      if(tempSquare === null){
+        break
+      }
+      if(this.doesSquareContainWhitePiece(tempSquare, boardObject)){
+        if(isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }else if(this.doesSquareContainBlackPiece(tempSquare, boardObject)){
+        if(!isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }
+      legalMoves.push(tempSquare)
+    }
+    
+    return legalMoves
+  }
+
+  findBishopMoves = (square, isWhite, boardObject) => {
+    let coordinate = this.convertChessNotation(square)
+    let legalMoves = []
+    let tempCoordinate = coordinate
+    let tempSquare = ''
+
+    //right-down
+    while(true){
+      tempCoordinate = {x: tempCoordinate.x+1, y:tempCoordinate.y-1}
+      tempSquare = this.convertCoordinate(tempCoordinate)
+      
+
+      if(tempSquare === null){
+        break
+      }
+      if(this.doesSquareContainWhitePiece(tempSquare, boardObject)){
+        if(isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }else if(this.doesSquareContainBlackPiece(tempSquare, boardObject)){
+        if(!isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }
+      legalMoves.push(tempSquare)
+    }
+    //right-up
+    tempCoordinate = coordinate
+    while(true){
+      tempCoordinate = {x: tempCoordinate.x+1, y:tempCoordinate.y+1}
+      tempSquare = this.convertCoordinate(tempCoordinate)
+      
+
+      if(tempSquare === null){
+        break
+      }
+      if(this.doesSquareContainWhitePiece(tempSquare, boardObject)){
+        if(isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }else if(this.doesSquareContainBlackPiece(tempSquare, boardObject)){
+        if(!isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }
+      legalMoves.push(tempSquare)
+    }
+    //left-down
+    tempCoordinate = coordinate
+    while(true){
+      tempCoordinate = {x: tempCoordinate.x-1, y:tempCoordinate.y-1}
+      tempSquare = this.convertCoordinate(tempCoordinate)
+      
+
+      if(tempSquare === null){
+        break
+      }
+      if(this.doesSquareContainWhitePiece(tempSquare, boardObject)){
+        if(isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }else if(this.doesSquareContainBlackPiece(tempSquare, boardObject)){
+        if(!isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }
+      legalMoves.push(tempSquare)
+    }
+    //left-up
+    tempCoordinate = coordinate
+    while(true){
+      tempCoordinate = {x: tempCoordinate.x-1, y:tempCoordinate.y+1}
+      tempSquare = this.convertCoordinate(tempCoordinate)
+      
+
+      if(tempSquare === null){
+        break
+      }
+      if(this.doesSquareContainWhitePiece(tempSquare, boardObject)){
+        if(isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }else if(this.doesSquareContainBlackPiece(tempSquare, boardObject)){
+        if(!isWhite){
+          break
+        }else{
+          legalMoves.push(tempSquare)
+          break
+        }
+      }
+      legalMoves.push(tempSquare)
+    }
+    
+    return legalMoves
+  }
+
+  findQueenMoves = (square, isWhite, boardObject) =>{
+    let legalMoves = this.findRookMoves(square, isWhite, boardObject).concat(this.findBishopMoves(square, isWhite, boardObject))
+    return legalMoves
+  }
+
+  findKnightMoves = (square, isWhite, boardObject) =>{
+    const coordinate = this.convertChessNotation(square)
+    let tempSquare = ''
+    let tempCoordinate = {}
+    let legalMoves = []
+    let movements = [{x:1,y:2},{x:2,y:1},{x:2,y:-1},{x:1,y:-2},{x:-1,y:-2},{x:-2,y:-1},{x:-2,y:1},{x:-2,y:2}]
+
+    for(let i = 0; i<movements.length; i++) {
+      let movement = movements[i]
+      tempCoordinate = {x:coordinate.x+movement.x, y:coordinate.y+movement.y}
+      tempSquare = this.convertCoordinate(tempCoordinate)
+
+      if(tempSquare === null){
+        continue
+      }
+      if(this.doesSquareContainWhitePiece(tempSquare, boardObject)){
+        if(isWhite){
+          continue
+        }else{
+          legalMoves.push(tempSquare)
+          continue
+        }
+      }else if(this.doesSquareContainBlackPiece(tempSquare, boardObject)){
+        if(!isWhite){
+          continue
+        }else{
+          legalMoves.push(tempSquare)
+          continue
+        }
+      }
+      legalMoves.push(tempSquare)
+    }
+
+    return legalMoves
+  }
+
+  findKingMoves = (square, isWhite, boardObject) =>{
+    const coordinate = this.convertChessNotation(square)
+    let tempSquare = ''
+    let tempCoordinate = {}
+    let legalMoves = []
+    let movements = [{x:1,y:0},{x:1,y:-1},{x:0,y:-1},{x:-1,y:-1},{x:-1,y:0},{x:-1,y:1},{x:0,y:1},{x:1,y:1}]
+
+    for(let i = 0; i<movements.length; i++) {
+      let movement = movements[i]
+      tempCoordinate = {x:coordinate.x+movement.x, y:coordinate.y+movement.y}
+      tempSquare = this.convertCoordinate(tempCoordinate)
+
+      if(tempSquare === null){
+        continue
+      }
+      if(this.doesSquareContainWhitePiece(tempSquare, boardObject)){
+        if(isWhite){
+          continue
+        }else{
+          legalMoves.push(tempSquare)
+          continue
+        }
+      }else if(this.doesSquareContainBlackPiece(tempSquare, boardObject)){
+        if(!isWhite){
+          continue
+        }else{
+          legalMoves.push(tempSquare)
+          continue
+        }
+      }
+      legalMoves.push(tempSquare)
+    }
+
+    return legalMoves
+  }
+
+  isSquareInCheck = (square, isWhite, boardObject) => {
+    //making constants of opposing pieces based on king color
+    let queen
+    let rook
+    let pawn
+    let bishop
+    let knight
+    let king
+
+    if(isWhite){
+      queen = blackQueen
+      rook = blackRook
+      pawn = blackPawn
+      bishop = blackBishop
+      knight = blackKnight
+      king = blackKing
+    }else{
+      queen = whiteQueen
+      rook = whiteRook
+      pawn = whitePawn
+      bishop = whiteBishop
+      knight = whiteKnight
+      king = whiteKing
+    }
+
+    let squareQueue
+    let inCheck = false
+
+    //looking for rook and lateral queen checks
+    squareQueue = this.findRookMoves(square, isWhite, boardObject)
+    for(let i=0; i<squareQueue.length; i++){
+      if(boardObject[squareQueue[i]] === queen || boardObject[squareQueue[i]] === rook){
+        return true
+      }
+    }
+
+    //looking for bishop and diagonal queen checks
+    squareQueue = this.findBishopMoves(square, isWhite, boardObject)
+    for(let i=0; i<squareQueue.length; i++){
+      if(boardObject[squareQueue[i]] === queen || boardObject[squareQueue[i]] === bishop){
+        return true
+      }
+    }
+
+    //looking for knight checks
+    squareQueue = this.findKnightMoves(square, isWhite, boardObject)
+    for(let i=0; i<squareQueue.length; i++){
+      if(boardObject[squareQueue[i]] === knight){
+        return true
+      }
+    }
+
+    //looking for king checks
+    squareQueue = this.findKingMoves(square, isWhite, boardObject)
+    for(let i=0; i<squareQueue.length; i++){
+      if(boardObject[squareQueue[i]] === king){
+        return true
+      }
+    }
+
+    //looking for pawn checks
+    squareQueue = this.findPawnMoves(square, isWhite, boardObject)
+    for(let i=0; i<squareQueue.length; i++){
+      if(boardObject[squareQueue[i]] === pawn){
+        return true
+      }
+    }
+    return false
+  }
  
   handleClick = (event) => {
-      if(this.state.whiteToPlay){
+      /*if(this.state.whiteToPlay){
         if(this.doesSquareContainWhitePiece(event.target.id, this.state.boardPosition)){
           this.setState({selectedSquare: event.target.id})
-          console.log(this.findPawnMoves(event.target.id, this.state.boardPosition))
+          console.log(this.findKnightMoves(event.target.id, true, this.state.boardPosition))
         }else{
           this.setState({selectedSquare: ''})
         }
       }else{
         if(this.doesSquareContainBlackPiece(event.target.id, this.state.boardPosition)){
           this.setState({selectedSquare: ''})
-          console.log(this.findPawnMoves(event.target.id, this.state.boardPosition))
+          console.log(this.findKnightMoves(event.target.id, false, this.state.boardPosition))
         }
-      }
+      } */
+      console.log(this.isSquareInCheck(event.target.id, true, this.state.boardPosition))
   }
 
   //this function is called on render for each square after "class="
