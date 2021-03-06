@@ -18,7 +18,7 @@ const startingPosition = {
   a1:whiteRook, b1:whiteKnight, c1:whiteBishop, d1:whiteQueen, e1:whiteKing, f1:whiteBishop, g1:whiteKnight, h1:whiteRook,
   a2:whitePawn, b2:whitePawn, c2:whitePawn, d2:whitePawn, e2:whitePawn, f2:whitePawn, g2:whitePawn, h2:whitePawn,
   a3:"", b3:"", c3:"", d3:"", e3:"", f3:"", g3:"", h3:"",
-  a4:"", b4:"", c4:blackRook, d4:"", e4:"", f4:"", g4:"", h4:"",
+  a4:"", b4:"", c4:"", d4:"", e4:"", f4:"", g4:"", h4:"",
   a5:"", b5:"", c5:"", d5:"", e5:"", f5:"", g5:"", h5:"",
   a6:"", b6:"", c6:"", d6:"", e6:"", f6:"", g6:"", h6:"",
   a7:blackPawn, b7:blackPawn, c7:blackPawn, d7:blackPawn, e7:blackPawn, f7:blackPawn, g7:blackPawn, h7:blackPawn,
@@ -49,6 +49,7 @@ export default class ChessBoard extends Component {
       blackKingPosition: 'e8',
 
       selectedSquare: '',
+      selectedPiece: '',
       legalMovesOfSelectedPiece: {}
 
     }
@@ -510,7 +511,7 @@ export default class ChessBoard extends Component {
     let tempSquare = ''
     let tempCoordinate = {}
     let legalMoves = []
-    let movements = [{x:1,y:2},{x:2,y:1},{x:2,y:-1},{x:1,y:-2},{x:-1,y:-2},{x:-2,y:-1},{x:-2,y:1},{x:-2,y:2}]
+    let movements = [{x:1,y:2},{x:2,y:1},{x:2,y:-1},{x:1,y:-2},{x:-1,y:-2},{x:-2,y:-1},{x:-2,y:1},{x:-1,y:2}]
 
     for(let i = 0; i<movements.length; i++) {
       let movement = movements[i]
@@ -541,7 +542,7 @@ export default class ChessBoard extends Component {
     return legalMoves
   }
 
-  findKingMoves = (square, isWhite, boardObject) =>{
+  findKingMoves = (square, isWhite, boardObject, lookForCastleMoves) =>{
     const coordinate = this.convertChessNotation(square)
     let tempSquare = ''
     let tempCoordinate = {}
@@ -572,6 +573,23 @@ export default class ChessBoard extends Component {
         }
       }
       legalMoves.push(tempSquare)
+    }
+
+    //castling
+    if(lookForCastleMoves){
+      if(isWhite){
+        if(!this.state.whiteKingMoved && !this.isSquareInCheck('e1', true, boardObject)){
+          if(!this.state.a1RookMoved && !this.isSquareInCheck('d1', true, boardObject) && !this.isSquareInCheck('c1', true, boardObject) && this.isSquareEmpty('b1', boardObject) && this.isSquareEmpty('c1', boardObject) && this.isSquareEmpty('d1', boardObject)){
+            legalMoves.push('0-0-0')
+          }
+          if(!this.state.h1RookMoved && !this.isSquareInCheck('f1', true, boardObject) && !this.isSquareInCheck('g1', true, boardObject) && this.isSquareEmpty('f1', boardObject) && this.isSquareEmpty('g1', boardObject)){
+            legalMoves.push('0-0')
+          }
+        }
+
+      }else{
+
+      }
     }
 
     return legalMoves
@@ -630,7 +648,7 @@ export default class ChessBoard extends Component {
     }
 
     //looking for king checks
-    squareQueue = this.findKingMoves(square, isWhite, boardObject)
+    squareQueue = this.findKingMoves(square, isWhite, boardObject, false)
     for(let i=0; i<squareQueue.length; i++){
       if(boardObject[squareQueue[i]] === king){
         return true
@@ -646,22 +664,79 @@ export default class ChessBoard extends Component {
     }
     return false
   }
+
+  findLegalMovesOfSelectedPiece = (square, boardObject) =>{
+    let piece = boardObject[square]
+
+    switch (piece) {
+      case whitePawn:
+        return this.findPawnMoves(square, true, boardObject)
+      case blackPawn:
+        return this.findPawnMoves(square, false, boardObject)
+      case whiteKnight:
+        return this.findKnightMoves(square, true, boardObject)
+      case blackKnight:
+        return this.findKnightMoves(square, false, boardObject)
+      case whiteBishop:
+        return this.findBishopMoves(square, true, boardObject)
+      case blackBishop:
+        return this.findBishopMoves(square, false, boardObject)
+      case whiteRook:
+        return this.findRookMoves(square, true, boardObject)
+      case blackRook:
+        return this.findRookMoves(square, false, boardObject)
+      case whiteQueen:
+        return this.findQueenMoves(square, true, boardObject)
+      case blackQueen:
+        return this.findQueenMoves(square, false, boardObject)
+      case whiteKing:
+        return this.findKingMoves(square, true, boardObject, true)
+      case blackKing:
+        return this.findKingMoves(square, false, boardObject, true)
+      default:
+        console.log('invalid chess piece')
+        break;
+    }
+  }
  
   handleClick = (event) => {
-      /*if(this.state.whiteToPlay){
+      if(this.state.whiteToPlay){
         if(this.doesSquareContainWhitePiece(event.target.id, this.state.boardPosition)){
-          this.setState({selectedSquare: event.target.id})
-          console.log(this.findKnightMoves(event.target.id, true, this.state.boardPosition))
+          let selectedPiece = this.state.boardPosition[event.target.id]
+          let legalMoves = this.findLegalMovesOfSelectedPiece(event.target.id, this.state.boardPosition)
+          console.log(legalMoves)
+          
+
+          this.setState({
+            selectedSquare: event.target.id,
+            selectedPiece: selectedPiece,
+            legalMovesOfSelectedPiece: legalMoves,
+          })
+        }else if(this.state.legalMovesOfSelectedPiece.includes(event.target.id)){
+          this.movePiece(this.state.selectedSquare, event.target.id)
+          this.setState({whiteToPlay:false,})
         }else{
           this.setState({selectedSquare: ''})
         }
       }else{
         if(this.doesSquareContainBlackPiece(event.target.id, this.state.boardPosition)){
+          let selectedPiece = this.state.boardPosition[event.target.id]
+          let legalMoves = this.findLegalMovesOfSelectedPiece(event.target.id, this.state.boardPosition)
+          console.log(legalMoves)
+          
+
+          this.setState({
+            selectedSquare: event.target.id,
+            selectedPiece: selectedPiece,
+            legalMovesOfSelectedPiece: legalMoves,
+          })
+        }else if(this.state.legalMovesOfSelectedPiece.includes(event.target.id)){
+          this.movePiece(this.state.selectedSquare, event.target.id)
+          this.setState({whiteToPlay:true,})
+        }else{
           this.setState({selectedSquare: ''})
-          console.log(this.findKnightMoves(event.target.id, false, this.state.boardPosition))
         }
-      } */
-      console.log(this.isSquareInCheck(event.target.id, true, this.state.boardPosition))
+      } 
   }
 
   //this function is called on render for each square after "class="
