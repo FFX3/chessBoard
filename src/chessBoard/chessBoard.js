@@ -24,6 +24,10 @@ const startingPosition = {
   a7:blackPawn, b7:blackPawn, c7:blackPawn, d7:blackPawn, e7:blackPawn, f7:blackPawn, g7:blackPawn, h7:blackPawn,
   a8:blackRook, b8:blackKnight, c8:blackBishop, d8:blackQueen, e8:blackKing, f8:blackBishop, g8:blackKnight, h8:blackRook,
 }
+const testPosition = {
+  a1:whiteKing,
+  b3:blackQueen
+}
 
 export default class ChessBoard extends Component {
 
@@ -43,14 +47,14 @@ export default class ChessBoard extends Component {
       blackKindMoved: false,
       whiteKingMoved: false,
 
-      boardPosition: startingPosition,
+      boardPosition: testPosition,
       lastMove: {},
       whiteKingPosition: 'e1',
       blackKingPosition: 'e8',
 
       selectedSquare: '',
       selectedPiece: '',
-      legalMovesOfSelectedPiece: {}
+      legalMovesOfSelectedPiece: []
 
     }
     this.handleClick = this.handleClick.bind(this);
@@ -139,6 +143,16 @@ export default class ChessBoard extends Component {
     square = square + (coordinate.y + 1).toString()
     return square
   }
+
+  //this function creates a clone of a board object
+  cloneBoardObject = (boardObject) => {
+    let clone = {}
+    
+    for(let key in boardObject){
+      clone[key] = boardObject[key]
+    }
+    return clone
+  }
   
   
   //visual html board manipulation
@@ -158,19 +172,22 @@ export default class ChessBoard extends Component {
   
   //boardObject Manipulation this function will be useful for doing calulation without actually changing the boardPosition in this.state
   removePieceFromBoardObject = (square, boardObject) => {
-    boardObject[square] = ''
+    let boardPosition = boardObject
+    boardPosition[square] = ''
     return boardObject
   }
 
   changePieceFromBoardObject = (square, piece, boardObject) => {
-    boardObject[square] = piece
+    let boardPosition = boardObject
+    boardPosition[square] = piece
     return boardObject
   }
 
   movePieceOnBoardObject = (start, end, boardObject) => {
-    let piece = boardObject[start]
-    boardObject = this.removePieceFromBoardObject(start, boardObject)
-    boardObject = this.changePieceFromBoardObject(end, piece, boardObject)
+    let boardPosition = boardObject
+    let piece = boardPosition[start]
+    boardObject = this.removePieceFromBoardObject(start, boardPosition)
+    boardObject = this.changePieceFromBoardObject(end, piece, boardPosition)
     return boardObject
   }
 
@@ -586,9 +603,15 @@ export default class ChessBoard extends Component {
             legalMoves.push('0-0')
           }
         }
-
       }else{
-
+        if(!this.state.blackKingMoved && !this.isSquareInCheck('e8', false, boardObject)){
+          if(!this.state.a8RookMoved && !this.isSquareInCheck('d8', false, boardObject) && !this.isSquareInCheck('c8', false, boardObject) && this.isSquareEmpty('b8', boardObject) && this.isSquareEmpty('c8', boardObject) && this.isSquareEmpty('d8', boardObject)){
+            legalMoves.push('0-0-0')
+          }
+          if(!this.state.h8RookMoved && !this.isSquareInCheck('f8', false, boardObject) && !this.isSquareInCheck('g8', false, boardObject) && this.isSquareEmpty('f8', boardObject) && this.isSquareEmpty('g8', boardObject)){
+            legalMoves.push('0-0')
+          }
+        }
       }
     }
 
@@ -698,8 +721,69 @@ export default class ChessBoard extends Component {
         break;
     }
   }
+
+  //checks if the board position is legal, meaning is the king in check
+  canKingBeCaputured = (isWhite, boardObject) =>{
+    let squareList = Object.entries(boardObject)
+
+    for(let i=0; i<squareList.length; i++){
+      if(isWhite){
+        if(squareList[i][1] === blackKing){
+          return this.isSquareInCheck(squareList[i][0], !isWhite, boardObject)
+        }
+      }else{
+        if(squareList[i][1] === whiteKing){
+          console.log(squareList[i][0])
+          return this.isSquareInCheck(squareList[i][0], !isWhite, boardObject)
+        }
+      }
+    }
+  }
+
+  //returns 'stalemate', 'checkmate', and false otherwise
+  findCheckmatesAndStalemates = (whiteToPlay, boardObject) =>{
+    const inCheck = this.canKingBeCaputured(!whiteToPlay, boardObject)
+    const squareList = Object.entries(boardObject)
+    const boardPosition = this.cloneBoardObject(boardObject)
+    let doesSquareContainCorrectPiece
+    
+    if(whiteToPlay){
+      doesSquareContainCorrectPiece = this.doesSquareContainWhitePiece
+    }else{
+      doesSquareContainCorrectPiece = this.doesSquareContainBlackPiece
+    }
+
+    for(let i=0; i<squareList.length; i++){
+      let piece = squareList[i][1]
+      let square = squareList[i][0]
+
+      if(doesSquareContainCorrectPiece(square, boardPosition)){
+        let legalMoves = this.findLegalMovesOfSelectedPiece(square, boardPosition)
+        for(let c=0; c<legalMoves.length; c++){
+          console.log(boardPosition)// looking good but the next line changes this constant
+          let pieceOnTargetSquare = boardPosition[legalMoves[c]]
+          this.movePieceOnBoardObject(square, legalMoves[c], boardPosition)
+          console.log(boardPosition)//this is not the same for some reason? boardPosition is mostlikely not an object but just a reference that points to this.state.boardPosition
+          console.log(`${piece} ${legalMoves[c]}`)
+          console.log(boardPosition)
+          if(!(this.canKingBeCaputured(!whiteToPlay, boardPosition))){
+            console.log(`${piece} ${legalMoves[c]}`)
+            return false
+          }
+          this.movePieceOnBoardObject(legalMoves[c], square, boardPosition)
+          boardPosition[legalMoves[c]] = pieceOnTargetSquare
+        }
+      }
+    }
+    if(inCheck){
+      return 'checkmate'
+    }else{
+      return 'stalemate'
+    }
+  }
  
   handleClick = (event) => {
+    alert(this.findCheckmatesAndStalemates(this.state.whiteToPlay, this.state.boardPosition))
       if(this.state.whiteToPlay){
         if(this.doesSquareContainWhitePiece(event.target.id, this.state.boardPosition)){
           let selectedPiece = this.state.boardPosition[event.target.id]
@@ -714,6 +798,14 @@ export default class ChessBoard extends Component {
           })
         }else if(this.state.legalMovesOfSelectedPiece.includes(event.target.id)){
           this.movePiece(this.state.selectedSquare, event.target.id)
+          this.setState({whiteToPlay:false,})
+        }else if(this.state.legalMovesOfSelectedPiece.includes("0-0") && event.target.id === 'g1'){
+          this.movePiece('h1', 'f1')
+          this.movePiece('e1', 'g1')
+          this.setState({whiteToPlay:false,})
+        }else if(this.state.legalMovesOfSelectedPiece.includes("0-0-0") && event.target.id === 'c1'){
+          this.movePiece('a1', 'd1')
+          this.movePiece('e1', 'c1')
           this.setState({whiteToPlay:false,})
         }else{
           this.setState({selectedSquare: ''})
@@ -733,6 +825,14 @@ export default class ChessBoard extends Component {
         }else if(this.state.legalMovesOfSelectedPiece.includes(event.target.id)){
           this.movePiece(this.state.selectedSquare, event.target.id)
           this.setState({whiteToPlay:true,})
+        }else if(this.state.legalMovesOfSelectedPiece.includes("0-0") && event.target.id === 'g8'){
+          this.movePiece('h8', 'f8')
+          this.movePiece('e8', 'g8')
+          this.setState({whiteToPlay:true,})
+        }else if(this.state.legalMovesOfSelectedPiece.includes("0-0-0") && event.target.id === 'c8'){
+          this.movePiece('a8', 'd8')
+          this.movePiece('e8', 'c8')
+          this.setState({whiteToPlay:true,})
         }else{
           this.setState({selectedSquare: ''})
         }
@@ -749,7 +849,7 @@ export default class ChessBoard extends Component {
   }
 
   componentDidMount(){
-    this.setupChessBoard(startingPosition)
+    this.setupChessBoard(this.state.boardPosition)
   }
 
   render() {
