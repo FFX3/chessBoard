@@ -47,7 +47,7 @@ export default class ChessBoard extends Component {
       blackKindMoved: false,
       whiteKingMoved: false,
 
-      boardPosition: testPosition,
+      boardPosition: startingPosition,
       lastMove: {},
       whiteKingPosition: 'e1',
       blackKingPosition: 'e8',
@@ -783,60 +783,157 @@ export default class ChessBoard extends Component {
   }
  
   handleClick = (event) => {
-    alert(this.findCheckmatesAndStalemates(this.state.whiteToPlay, this.state.boardPosition))
+      //white's turn
       if(this.state.whiteToPlay){
+        //clicked on our own piece
         if(this.doesSquareContainWhitePiece(event.target.id, this.state.boardPosition)){
           let selectedPiece = this.state.boardPosition[event.target.id]
           let legalMoves = this.findLegalMovesOfSelectedPiece(event.target.id, this.state.boardPosition)
           console.log(legalMoves)
-          
 
           this.setState({
             selectedSquare: event.target.id,
             selectedPiece: selectedPiece,
             legalMovesOfSelectedPiece: legalMoves,
           })
+        
+          //is this square I just clicked on a legal move for the last piece I clicked on
         }else if(this.state.legalMovesOfSelectedPiece.includes(event.target.id)){
-          this.movePiece(this.state.selectedSquare, event.target.id)
-          this.setState({whiteToPlay:false,})
+          //cloneBoard to check for checkmates
+          let boardClone = this.cloneBoardObject(this.state.boardPosition)
+          //make move on imaginary board
+          this.movePieceOnBoardObject(this.state.selectedSquare, event.target.id, boardClone)
+
+          //check if this move leaves the whiteKing in check
+          if(!this.canKingBeCaputured(false, boardClone)){
+            //the move is leagal so move the piece
+            this.movePiece(this.state.selectedSquare, event.target.id)
+            this.setState({whiteToPlay:false,})
+
+            //update rookedMoved and kingMoved variables
+            if(this.state.selectedPiece === whiteKing){
+              this.setState({whiteKingMoved: true,})
+            }else if(this.state.selectedPiece === whiteRook){
+              if(!this.state.a1RookMoved && this.state.selectedSquare === 'a1'){
+                this.setState({a1RookMoved: true,})
+              }else if(!this.state.h1RookMoved && this.state.selectedSquare === 'h1'){
+                this.setState({h1RookMoved: true,})
+              }
+            }
+
+            //check for checkmates and stalemates
+            if(this.findCheckmatesAndStalemates(false, this.state.boardPosition) === 'checkmate'){
+              alert("White wins by checkmate")
+            }else if (this.findCheckmatesAndStalemates(false, this.state.boardPosition) === 'stalemate'){
+              alert("Stalemate")
+            }
+          }
         }else if(this.state.legalMovesOfSelectedPiece.includes("0-0") && event.target.id === 'g1'){
           this.movePiece('h1', 'f1')
           this.movePiece('e1', 'g1')
-          this.setState({whiteToPlay:false,})
+          this.setState({
+            whiteToPlay:false,
+            whiteKingMoved:true,
+            h1RookMoved:true,
+          })
+          //check for checkmates and stalemates
+          if(this.findCheckmatesAndStalemates(false, this.state.boardPosition) === 'checkmate'){
+            alert("White wins by checkmate")
+          }else if (this.findCheckmatesAndStalemates(false, this.state.boardPosition) === 'stalemate'){
+            alert("Stalemate")
+          }
         }else if(this.state.legalMovesOfSelectedPiece.includes("0-0-0") && event.target.id === 'c1'){
           this.movePiece('a1', 'd1')
           this.movePiece('e1', 'c1')
-          this.setState({whiteToPlay:false,})
+          this.setState({
+            whiteToPlay:false,
+            whiteKingMoved:true,
+            a1RookMoved:true,
+          })
+          //check for checkmates and stalemates
+          if(this.findCheckmatesAndStalemates(false, this.state.boardPosition) === 'checkmate'){
+            alert("White wins by checkmate")
+          }else if (this.findCheckmatesAndStalemates(false, this.state.boardPosition) === 'stalemate'){
+            alert("Stalemate")
+          }
         }else{
           this.setState({selectedSquare: ''})
         }
       }else{
+        //clicked on our own piece
         if(this.doesSquareContainBlackPiece(event.target.id, this.state.boardPosition)){
           let selectedPiece = this.state.boardPosition[event.target.id]
           let legalMoves = this.findLegalMovesOfSelectedPiece(event.target.id, this.state.boardPosition)
           console.log(legalMoves)
-          
 
           this.setState({
             selectedSquare: event.target.id,
             selectedPiece: selectedPiece,
             legalMovesOfSelectedPiece: legalMoves,
           })
+        
+          //is this square I just clicked on a legal move for the last piece I clicked on
         }else if(this.state.legalMovesOfSelectedPiece.includes(event.target.id)){
-          this.movePiece(this.state.selectedSquare, event.target.id)
-          this.setState({whiteToPlay:true,})
+          //cloneBoard to check for checkmates
+          let boardClone = this.cloneBoardObject(this.state.boardPosition)
+          //make move on imaginary board
+          this.movePieceOnBoardObject(this.state.selectedSquare, event.target.id, boardClone)
+
+          //check if this move leaves the whiteKing in check
+          if(!this.canKingBeCaputured(true, boardClone)){
+            //the move is leagal so move the piece
+            this.movePiece(this.state.selectedSquare, event.target.id)
+            this.setState({whiteToPlay:true,})
+
+            //update rookedMoved and kingMoved variables
+            if(this.state.selectedPiece === blackKing){
+              this.setState({blackKingMoved: true,})
+            }else if(this.state.selectedPiece === whiteRook){
+              if(!this.state.a8RookMoved && this.state.selectedSquare === 'a8'){
+                this.setState({a8RookMoved: true,})
+              }else if(!this.state.h8RookMoved && this.state.selectedSquare === 'h8'){
+                this.setState({h8RookMoved: true,})
+              }
+            }
+            //check for checkmates and stalemates
+            if(this.findCheckmatesAndStalemates(true, this.state.boardPosition) === 'checkmate'){
+              alert("Black wins by checkmate")
+            }else if (this.findCheckmatesAndStalemates(true, this.state.boardPosition) === 'stalemate'){
+              alert("Stalemate")
+            }
+          }
         }else if(this.state.legalMovesOfSelectedPiece.includes("0-0") && event.target.id === 'g8'){
           this.movePiece('h8', 'f8')
           this.movePiece('e8', 'g8')
-          this.setState({whiteToPlay:true,})
+          this.setState({
+            whiteToPlay:false,
+            whiteKingMoved:true,
+            h8RookMoved:true,
+          })
+          //check for checkmates and stalemates
+          if(this.findCheckmatesAndStalemates(true, this.state.boardPosition) === 'checkmate'){
+            alert("Black wins by checkmate")
+          }else if (this.findCheckmatesAndStalemates(true, this.state.boardPosition) === 'stalemate'){
+            alert("Stalemate")
+          }
         }else if(this.state.legalMovesOfSelectedPiece.includes("0-0-0") && event.target.id === 'c8'){
           this.movePiece('a8', 'd8')
           this.movePiece('e8', 'c8')
-          this.setState({whiteToPlay:true,})
+          this.setState({
+            whiteToPlay:false,
+            whiteKingMoved:true,
+            a8RookMoved:true,
+          })
+          //check for checkmates and stalemates
+          if(this.findCheckmatesAndStalemates(true, this.state.boardPosition) === 'checkmate'){
+            alert("Black wins by checkmate")
+          }else if (this.findCheckmatesAndStalemates(true, this.state.boardPosition) === 'stalemate'){
+            alert("Stalemate")
+          }
         }else{
           this.setState({selectedSquare: ''})
         }
-      } 
+      }
   }
 
   //this function is called on render for each square after "class="
