@@ -202,8 +202,16 @@ export default class ChessBoard extends Component {
     this.setState({boardPosition: this.changePieceFromBoardObject(square, piece, this.state.boardPosition)})
   }
   movePiece = (start, end) =>{
+    let piece = this.state.boardPosition[start]
     this.movePieceVisually(start, end)
-    this.setState({boardPosition: this.movePieceOnBoardObject(start, end, this.state.boardPosition)})
+    let newBoardObject = this.movePieceOnBoardObject(start, end, this.state.boardPosition)
+    newBoardObject.lastMove = {piece:piece, start:start, end:end,}
+    this.setState({
+      boardPosition: newBoardObject,
+      legalMovesOfSelectedPiece: [],
+      selectedPiece: '',
+      selectedSquare: ''
+    })
   }
 
   //chess logic
@@ -280,7 +288,31 @@ export default class ChessBoard extends Component {
       }
     }
     //enpasant
+    if(boardObject.lastMove){
+      if((boardObject.lastMove.piece === whitePawn || boardObject.lastMove.piece === blackPawn)){
+        let lastMoveCoordinate = this.convertChessNotation(boardObject.lastMove.end)
+        let leftOfLastMoveCoordinate = {x:lastMoveCoordinate.x-1, y:lastMoveCoordinate.y}
+        let rightOfLastMoveCoordinate = {x:lastMoveCoordinate.x+1, y:lastMoveCoordinate.y}
 
+        let leftOfLastMoveSquare = this.convertCoordinate(leftOfLastMoveCoordinate)
+        let rightOfLastMoveSquare = this.convertCoordinate(rightOfLastMoveCoordinate)
+
+        let behindLastMoveCoordinate = {x:lastMoveCoordinate.x, y:lastMoveCoordinate.y+direction}
+        let behindLastMoveSquare = this.convertCoordinate(behindLastMoveCoordinate)
+        console.log(leftOfLastMoveSquare)
+        //we are white
+        if(direction === 1){
+          if((boardObject.lastMove.start[1] === '7' && boardObject.lastMove.end[1] === '5') && (square === leftOfLastMoveSquare || square === rightOfLastMoveSquare)){
+            legalMoves.push(`enpassant ${behindLastMoveSquare} x${boardObject.lastMove.end}`)
+          }
+        //we are black
+        }else{
+          if((boardObject.lastMove.start[1] === '2' && boardObject.lastMove.end[1] === '4') && (square === leftOfLastMoveSquare || square === rightOfLastMoveSquare)){
+            legalMoves.push(`enpassant ${behindLastMoveSquare} x${boardObject.lastMove.end}`)
+          }
+        }
+      }
+    }
     return legalMoves
   }
 
@@ -733,7 +765,6 @@ export default class ChessBoard extends Component {
         }
       }else{
         if(squareList[i][1] === whiteKing){
-          console.log(squareList[i][0])
           return this.isSquareInCheck(squareList[i][0], !isWhite, boardObject)
         }
       }
@@ -760,14 +791,9 @@ export default class ChessBoard extends Component {
       if(doesSquareContainCorrectPiece(square, boardPosition)){
         let legalMoves = this.findLegalMovesOfSelectedPiece(square, boardPosition)
         for(let c=0; c<legalMoves.length; c++){
-          console.log(boardPosition)// looking good but the next line changes this constant
           let pieceOnTargetSquare = boardPosition[legalMoves[c]]
           this.movePieceOnBoardObject(square, legalMoves[c], boardPosition)
-          console.log(boardPosition)//this is not the same for some reason? boardPosition is mostlikely not an object but just a reference that points to this.state.boardPosition
-          console.log(`${piece} ${legalMoves[c]}`)
-          console.log(boardPosition)
           if(!(this.canKingBeCaputured(!whiteToPlay, boardPosition))){
-            console.log(`${piece} ${legalMoves[c]}`)
             return false
           }
           this.movePieceOnBoardObject(legalMoves[c], square, boardPosition)
@@ -789,7 +815,6 @@ export default class ChessBoard extends Component {
         if(this.doesSquareContainWhitePiece(event.target.id, this.state.boardPosition)){
           let selectedPiece = this.state.boardPosition[event.target.id]
           let legalMoves = this.findLegalMovesOfSelectedPiece(event.target.id, this.state.boardPosition)
-          console.log(legalMoves)
 
           this.setState({
             selectedSquare: event.target.id,
@@ -864,7 +889,6 @@ export default class ChessBoard extends Component {
         if(this.doesSquareContainBlackPiece(event.target.id, this.state.boardPosition)){
           let selectedPiece = this.state.boardPosition[event.target.id]
           let legalMoves = this.findLegalMovesOfSelectedPiece(event.target.id, this.state.boardPosition)
-          console.log(legalMoves)
 
           this.setState({
             selectedSquare: event.target.id,
