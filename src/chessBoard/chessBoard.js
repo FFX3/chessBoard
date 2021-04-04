@@ -54,7 +54,7 @@ export default class ChessBoard extends Component {
 
       selectedSquare: '',
       selectedPiece: '',
-      legalMovesOfSelectedPiece: []
+      legalMovesOfSelectedPiece: [],
 
     }
     this.handleClick = this.handleClick.bind(this);
@@ -299,7 +299,6 @@ export default class ChessBoard extends Component {
 
         let behindLastMoveCoordinate = {x:lastMoveCoordinate.x, y:lastMoveCoordinate.y+direction}
         let behindLastMoveSquare = this.convertCoordinate(behindLastMoveCoordinate)
-        console.log(leftOfLastMoveSquare)
         //we are white
         if(direction === 1){
           if((boardObject.lastMove.start[1] === '7' && boardObject.lastMove.end[1] === '5') && (square === leftOfLastMoveSquare || square === rightOfLastMoveSquare)){
@@ -809,6 +808,12 @@ export default class ChessBoard extends Component {
   }
  
   handleClick = (event) => {
+    let findIndexEnpassant = this.state.legalMovesOfSelectedPiece.findIndex((moveString) => {
+      if(moveString.slice(0, 9) === 'enpassant'){
+        return true
+      }
+      return false
+    })
       //white's turn
       if(this.state.whiteToPlay){
         //clicked on our own piece
@@ -881,6 +886,30 @@ export default class ChessBoard extends Component {
           }else if (this.findCheckmatesAndStalemates(false, this.state.boardPosition) === 'stalemate'){
             alert("Stalemate")
           }
+          //check if an Enpassant move was found
+        }else if(findIndexEnpassant !== -1 && event.target.id === this.state.legalMovesOfSelectedPiece[findIndexEnpassant].slice(10, 12)){
+          // make enpassant move 
+          //cloneBoard to check for checkmates
+          let boardClone = this.cloneBoardObject(this.state.boardPosition)
+          //make move on imaginary board
+          this.movePieceOnBoardObject(this.state.selectedSquare, event.target.id, boardClone)
+          this.removePieceFromBoardObject(this.state.legalMovesOfSelectedPiece[findIndexEnpassant].slice(14), boardClone)
+
+          //check if this move leaves the whiteKing in check
+          if(!this.canKingBeCaputured(false, boardClone)){
+            //the move is leagal so move the piece
+            this.movePiece(this.state.selectedSquare, event.target.id)
+            this.removePiece(this.state.legalMovesOfSelectedPiece[findIndexEnpassant].slice(14))
+            this.setState({whiteToPlay:false,})
+
+
+            //check for checkmates and stalemates
+            if(this.findCheckmatesAndStalemates(false, this.state.boardPosition) === 'checkmate'){
+              alert("White wins by checkmate")
+            }else if (this.findCheckmatesAndStalemates(false, this.state.boardPosition) === 'stalemate'){
+              alert("Stalemate")
+            }
+          }
         }else{
           this.setState({selectedSquare: ''})
         }
@@ -903,7 +932,7 @@ export default class ChessBoard extends Component {
           //make move on imaginary board
           this.movePieceOnBoardObject(this.state.selectedSquare, event.target.id, boardClone)
 
-          //check if this move leaves the whiteKing in check
+          //check if this move leaves the blackKing in check
           if(!this.canKingBeCaputured(true, boardClone)){
             //the move is leagal so move the piece
             this.movePiece(this.state.selectedSquare, event.target.id)
@@ -930,8 +959,8 @@ export default class ChessBoard extends Component {
           this.movePiece('h8', 'f8')
           this.movePiece('e8', 'g8')
           this.setState({
-            whiteToPlay:false,
-            whiteKingMoved:true,
+            whiteToPlay:true,
+            blackKingMoved:true,
             h8RookMoved:true,
           })
           //check for checkmates and stalemates
@@ -944,8 +973,8 @@ export default class ChessBoard extends Component {
           this.movePiece('a8', 'd8')
           this.movePiece('e8', 'c8')
           this.setState({
-            whiteToPlay:false,
-            whiteKingMoved:true,
+            whiteToPlay:true,
+            blackKingMoved:true,
             a8RookMoved:true,
           })
           //check for checkmates and stalemates
@@ -953,6 +982,29 @@ export default class ChessBoard extends Component {
             alert("Black wins by checkmate")
           }else if (this.findCheckmatesAndStalemates(true, this.state.boardPosition) === 'stalemate'){
             alert("Stalemate")
+          }
+        }else if(findIndexEnpassant !== -1 && event.target.id === this.state.legalMovesOfSelectedPiece[findIndexEnpassant].slice(10, 12)){
+          // make enpassant move 
+          //cloneBoard to check for checkmates
+          let boardClone = this.cloneBoardObject(this.state.boardPosition)
+          //make move on imaginary board
+          this.movePieceOnBoardObject(this.state.selectedSquare, event.target.id, boardClone)
+          this.removePieceFromBoardObject(this.state.legalMovesOfSelectedPiece[findIndexEnpassant].slice(14), boardClone)
+
+          //check if this move leaves the whiteKing in check
+          if(!this.canKingBeCaputured(false, boardClone)){
+            //the move is leagal so move the piece
+            this.movePiece(this.state.selectedSquare, event.target.id)
+            this.removePiece(this.state.legalMovesOfSelectedPiece[findIndexEnpassant].slice(14))
+            this.setState({whiteToPlay:true,})
+
+
+            //check for checkmates and stalemates
+            if(this.findCheckmatesAndStalemates(false, this.state.boardPosition) === 'checkmate'){
+              alert("White wins by checkmate")
+            }else if (this.findCheckmatesAndStalemates(false, this.state.boardPosition) === 'stalemate'){
+              alert("Stalemate")
+            }
           }
         }else{
           this.setState({selectedSquare: ''})
